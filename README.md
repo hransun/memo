@@ -50,3 +50,9 @@ FastAPI + Jinja2 + SQLite + 普通 CSS / JavaScript。服务默认只监听本�
 ```powershell
 .venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
+
+## 代码结构与主题
+
+应用按 View、Controller、Service、Model 分层。阅读顺序和一次完整请求的示例见 [ARCHITECTURE.md](ARCHITECTURE.md)。启动方式和本地数据格式保持兼容。
+
+右上角可切换「黑红主题／浅色主题」。黑红主题采用深色背景和红色强调，偏好保存在当前浏览器。
