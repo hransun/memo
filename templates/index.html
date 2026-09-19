@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>memo · 把想法往前推进</title><link rel="stylesheet" href="/static/style.css"><script src="/static/app.js" defer></script></head>
+<body>
+<header><div class="header-start"><button id="toggle-sidebar" class="secondary" type="button" aria-controls="memo-sidebar" aria-expanded="true">收起列表</button><a class="brand" href="/">memo<span>一点一滴，留下进展。</span></a></div><span class="local"><i></i> 我的本地笔记</span></header>
+<div class="workspace">
+<aside id="memo-sidebar">
+  <details class="upload" {% if not pages %}open{% endif %}><summary>＋ 新建笔记页</summary><form action="/pages?token={{ token }}" method="post" enctype="multipart/form-data"><label>笔记标题<input name="title" required maxlength="200" placeholder="例如：九月的想法与计划"></label><label>标签（可选，逗号分隔）<input name="tags" maxlength="310" placeholder="学习，家庭"></label><label>照片（可选）<input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label><small>JPG / PNG / WebP，最大 20 MB</small><button type="submit">创建笔记页</button></form></details>
+  <form class="search-form" action="/" method="get" role="search">
+    <label>搜索笔记<input name="q" value="{{ q }}" maxlength="200" placeholder="标题、条目、进度或标签"></label>
+    <label>标签<select name="tag"><option value="">全部标签</option>{% for t in all_tags %}<option value="{{ t }}" {% if t == tag %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
+    <div class="search-actions"><button type="submit">搜索</button>{% if q or tag %}<a href="/">清除筛选</a>{% endif %}<a href="/trash">回收站</a></div>
+  </form>
+  <div class="aside-heading"><span class="eyebrow">最近更新</span><span>{{ pages|length }} 页 · 置顶 {{ pinned_count }}/5</span></div>
+  {% if pinned_count >= 5 %}<p class="muted">置顶已满，请先取消一个置顶。</p>{% endif %}
+  <div class="list-filters" role="group" aria-label="筛选笔记"><button type="button" data-list-filter="all" aria-pressed="true">全部 {{ pages|length }}</button><button type="button" data-list-filter="favorites" aria-pressed="false">收藏 {{ favorite_count }}</button></div>
+  <p id="no-favorites" class="muted" hidden>当前列表没有收藏。可切回「全部」或清除搜索条件。</p>
+  <nav aria-label="笔记页">{% for p in pages %}<div class="sidebar-entry" data-favorite="{{ p.favorite }}"><a class="page-link {% if selected and selected.id == p.id %}active{% endif %}" href="/?page={{ p.id }}{% if q %}&amp;q={{ q|urlencode }}{% endif %}{% if tag %}&amp;tag={{ tag|urlencode }}{% endif %}"><strong>{% if p.pinned %}<span class="pin-label">置顶</span> {% endif %}{{ p.title }}</strong><small>更新于 {{ (p.updated_at or p.created)[:16] }}</small></a><div class="sidebar-actions"><form class="pin-form" action="/pages/{{ p.id }}/pin?token={{ token }}" method="post"><input type="hidden" name="pinned" value="{{ 0 if p.pinned else 1 }}"><button class="quiet pin-button" type="submit" aria-label="{{ '取消置顶' if p.pinned else '置顶' }}：{{ p.title }}">{{ '取消置顶' if p.pinned else '置顶' }}</button></form><form action="/pages/{{ p.id }}/favorite?token={{ token }}" method="post"><input type="hidden" name="favorite" value="{{ 0 if p.favorite else 1 }}"><button class="quiet favorite-button" type="submit" aria-label="{{ '取消收藏' if p.favorite else '收藏' }}：{{ p.title }}">{{ '★ 已收藏' if p.favorite else '☆ 收藏' }}</button></form></div></div>{% else %}<p class="muted">{% if q or tag %}没有找到匹配的笔记。{% else %}你的第一张笔记，<br>就从这里开始。{% endif %}</p>{% endfor %}</nav>
+
+  <div class="aside-note"><strong>留在自己的节奏里</strong><p>随手记录想法，<br>每一次更新记录行动。</p><small>数据保存在本机。关闭程序后，复制 data 文件夹即可备份。</small></div>
+</aside>
+<main>
+{% if selected %}
+  <div class="page-heading"><div><p class="eyebrow">NOTE / {{ '%02d'|format(selected.id) }}</p><h1>{{ selected.title }}</h1><p class="muted">创建于 {{ selected.created }} · 每一步都算数</p></div><form action="/pages/{{ selected.id }}/delete?token={{ token }}" method="post" data-confirm="将此页笔记移入回收站？照片和进度会保留，可随时恢复。"><button class="quiet danger" type="submit">移入回收站</button></form></div>
+  <div class="tag-chips">{% for t in page_tags.get(selected.id, []) %}<a href="/?tag={{ t|urlencode }}"># {{ t }}</a>{% endfor %}</div>
+  <details class="page-settings"><summary>修改标题与标签</summary><form action="/pages/{{ selected.id }}/edit?token={{ token }}" method="post"><label>笔记标题<input name="title" value="{{ selected.title }}" required maxlength="200"></label><label>标签（逗号分隔，每页最多 10 个）<input name="tags" value="{{ page_tags.get(selected.id, [])|join(', ') }}" maxlength="310" placeholder="学习，家庭"></label><button type="submit">保存标题与标签</button></form></details>
+  <div class="columns {% if not selected.image %}text-only{% endif %}">
+    {% if selected.image %}<section class="photo-section"><div class="section-heading"><h2>纸上的想法</h2><a href="/pages/{{ selected.id }}/photo" target="_blank" rel="noopener">查看大图 ↗</a></div><a class="photo-frame" href="/pages/{{ selected.id }}/photo" target="_blank" rel="noopener"><img src="/pages/{{ selected.id }}/photo" alt="{{ selected.title }}的笔记照片"></a><p class="caption">对照原图，慢慢把想法整理成行动。</p></section>{% endif %}
+    <section class="items-section"><div class="section-heading"><h2>行动与进展</h2><span>{{ done }} / {{ items|length }} 已完成</span></div><progress value="{{ done }}" max="{{ items|length or 1 }}" aria-label="笔记完成进度"></progress>
+      <form class="add-item" action="/pages/{{ selected.id }}/items?token={{ token }}" method="post"><label class="sr-only" for="new-item">新条目</label><input id="new-item" name="title" maxlength="200" required placeholder="记下一件想做的事…"><button type="submit">＋ 添加</button></form>
+      {% for item in items %}<article class="item {{ item.status }}"><div class="item-top"><span class="number">{{ '%02d'|format(loop.index) }}</span><h3>{{ item.title }}</h3><span class="badge {{ item.status }}">{{ statuses[item.status] }}</span></div>
+      <details><summary>更新条目 <span>{{ item.updates|length }} 条记录</span></summary><div class="item-body">
+        <form action="/items/{{ item.id }}/edit?token={{ token }}" method="post"><label>条目内容<input name="title" value="{{ item.title }}" required maxlength="200"></label><div class="edit-row"><label>当前状态<select name="status">{% for key, label in statuses.items() %}<option value="{{ key }}" {% if item.status == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><button class="secondary" type="submit">保存修改</button></div></form>
+        <form class="update-form" action="/items/{{ item.id }}/updates?token={{ token }}" method="post"><label>这次有什么进展？<textarea name="body" rows="3" required maxlength="5000" placeholder="例如：今天读到第六章，明天继续。"></textarea></label><button type="submit">记录进展</button></form>
+        <div class="timeline">{% for update in item.updates %}<div class="entry"><time>{{ update.created }}</time><p>{{ update.body }}</p></div>{% else %}<p class="muted">还没有进度记录，写下你的第一步吧。</p>{% endfor %}</div>
+        <form action="/items/{{ item.id }}/delete?token={{ token }}" method="post" data-confirm="将这个条目移入回收站？进度记录会保留，可随时恢复。"><button class="quiet danger" type="submit">移入回收站</button></form>
+      </div></details>{% if item.updates %}<p class="latest">{{ item.updates[0].body }}</p><small class="latest-date">{{ item.updates[0].created }}</small>{% endif %}</article>{% else %}<div class="list-empty"><span>✎</span><h3>从一件小事开始</h3><p>把第一条想法添加进来，<br>随时记录你的进展。</p></div>{% endfor %}
+    </section>
+  </div>
+{% elif q or tag %}
+  <div class="empty"><h1>没有找到匹配的笔记</h1><p>试试其他关键词或标签。</p><a class="button" href="/">查看全部笔记</a></div>
+{% else %}
+  <div class="empty"><span class="paper-mark">✎</span><p class="eyebrow">YOUR THOUGHTS, IN MOTION</p><h1>让每一个想法，<br>有下一步。</h1><p>新建一页笔记，整理想做的事。照片可以不上传。<br>每完成一点，就为自己留下一条记录。</p><div class="steps"><span>01 新建笔记</span><span>02 整理条目</span><span>03 记录进展</span></div><p class="muted">从左侧「新建笔记页」开始。</p></div>
+{% endif %}
+</main></div><div id="notice" role="status" aria-live="polite"></div>
+</body></html>

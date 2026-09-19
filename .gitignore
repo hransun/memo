@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+data/
+*.pyc
+.env
+.env.*
+!.env.example
+.pytest_cache/
+.tmp/
+scripts/import_confirmed_memos.py
+scripts/read_handwriting.py

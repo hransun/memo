@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>回收站 · memo</title><link rel="stylesheet" href="/static/style.css"><script src="/static/app.js" defer></script></head>
+<body><header><a class="brand" href="/">memo</a><a class="button" href="/">返回笔记</a></header>
+<main class="trash-main"><p class="eyebrow">TRASH</p><h1>回收站</h1><p class="muted">笔记、照片和进度记录会保留，直到你选择彻底删除。恢复笔记后可重新置顶。</p>
+{% for kind, records in [('pages', pages), ('items', items)] %}
+<section><h2>{{ '笔记页' if kind == 'pages' else '条目' }} · {{ records|length }}</h2>
+{% for record in records %}<article class="item"><h3>{{ record.title }}</h3><p class="muted">{% if kind == 'items' %}来自 {{ record.page_title }} · {% endif %}移入时间 {{ record.deleted_at }}</p><div class="trash-actions"><form action="/trash/{{ kind }}/{{ record.id }}/restore?token={{ token }}" method="post"><button type="submit">恢复</button></form><form action="/trash/{{ kind }}/{{ record.id }}/purge?token={{ token }}" method="post" data-confirm="彻底删除这条记录及其内容？此操作无法撤销。"><button class="quiet danger" type="submit">彻底删除</button></form></div></article>{% else %}<p class="muted">暂无已删除{{ '笔记页' if kind == 'pages' else '条目' }}。</p>{% endfor %}
+</section>{% endfor %}<p class="muted">已删除笔记中的条目随笔记一起恢复；此前单独删除的条目，恢复笔记后仍会保留在回收站。</p></main><div id="notice" role="status" aria-live="polite"></div></body></html>
