@@ -1,0 +1,78 @@
+/* Theme is a view concern: no server or data changes. */
+:root[data-theme="cinema"] {
+  color-scheme: dark;
+  --green: #c91e2b;
+  --line: #353535;
+  --muted: #aaa;
+  background: #101010;
+  color: #f0eeee;
+}
+[data-theme="cinema"] body { background: #101010; }
+[data-theme="cinema"] header { background: #141414; }
+[data-theme="cinema"] .brand { color: #ed2734; }
+[data-theme="cinema"] aside { background: #171717; }
+[data-theme="cinema"] .item,
+[data-theme="cinema"] .page-settings form,
+[data-theme="cinema"] input,
+[data-theme="cinema"] textarea,
+[data-theme="cinema"] select { background: #202020; color: #f0eeee; border-color: #414141; }
+[data-theme="cinema"] .page-link.active { background: #2a1c1e; border-left-color: #e52b38; box-shadow: none; }
+[data-theme="cinema"] .page-link:hover { background: #292929; }
+[data-theme="cinema"] .secondary,
+[data-theme="cinema"] .tag-chips a,
+[data-theme="cinema"] .pin-label { background: #382025; color: #ff929b; }
+[data-theme="cinema"] .eyebrow,
+[data-theme="cinema"] .upload summary,
+[data-theme="cinema"] .page-settings summary,
+[data-theme="cinema"] .search-actions a,
+[data-theme="cinema"] .pin-button,
+[data-theme="cinema"] .favorite-button,
+[data-theme="cinema"] .item summary { color: #ff929b; }
+[data-theme="cinema"] .list-filters button { color: #ddd; }
+[data-theme="cinema"] .list-filters button[aria-pressed="true"] { background: #b8202b; border-color: #b8202b; color: #fff; }
+[data-theme="cinema"] label,
+[data-theme="cinema"] .local,
+[data-theme="cinema"] .aside-note strong,
+[data-theme="cinema"] .entry p,
+[data-theme="cinema"] .latest,
+[data-theme="cinema"] .steps { color: #c4bfc0; }
+[data-theme="cinema"] .local i { background: #ee3945; }
+[data-theme="cinema"] .upload,
+[data-theme="cinema"] .list-empty,
+[data-theme="cinema"] .entry { border-color: #494044; }
+[data-theme="cinema"] .photo-frame { background: #242020; border-color: #41383a; }
+[data-theme="cinema"] .paper-mark { background: #352025; color: #ff929b; box-shadow: 8px 8px 0 #21191b; }
+[data-theme="cinema"] .badge { background: #363636; color: #ddd; }
+[data-theme="cinema"] .badge.doing { background: #473623; color: #f0c77b; }
+[data-theme="cinema"] .badge.done { background: #263b2c; color: #b1d6ae; }
+[data-theme="cinema"] .item.done h3 { color: #b2b2b2; }
+[data-theme="cinema"] .list-empty h3,
+[data-theme="cinema"] .list-empty>span { color: #c6b9bc; }
+[data-theme="cinema"] progress,
+[data-theme="cinema"] progress::-webkit-progress-bar { background: #373032; }
+[data-theme="cinema"] progress::-webkit-progress-value { background: #d83543; }
+[data-theme="cinema"] progress::-moz-progress-bar { background: #d83543; }
+[data-theme="cinema"] input:focus,
+[data-theme="cinema"] textarea:focus,
+[data-theme="cinema"] select:focus { outline-color: #ff929b; }
+[data-theme="cinema"] #notice { background: #90212a; color: white; }
+[data-theme="cinema"] .danger:hover { color: #ff939a; }
+
+/* Keep everyday navigation calm, without hiding controls on touch devices. */
+header { gap: 16px; }
+header .local { margin-left: auto; }
+.sidebar-actions button { opacity: .75; }
+.sidebar-entry:hover .sidebar-actions button,
+.sidebar-entry:focus-within .sidebar-actions button { opacity: 1; }
+.item { padding: 22px; }
+.item h3 { font-size: 15px; }
+@media (min-width: 1051px) {
+  #memo-sidebar { position: sticky; top: 0; height: calc(100vh - 90px); display: flex; flex-direction: column; }
+  #memo-sidebar nav { flex: 1; min-height: 120px; overflow-y: auto; }
+  #memo-sidebar .aside-note { margin-top: 20px; }
+}
+@media (max-width: 650px) {
+  header { flex-wrap: wrap; height: auto; min-height: 72px; padding-top: 12px; padding-bottom: 12px; gap: 10px; }
+  header .local { display: none; }
+  #toggle-theme { margin-left: auto; padding: 9px; font-size: 11px; }
+}

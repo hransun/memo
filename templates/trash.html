@@ -1,6 +1,6 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>回收站 · memo</title><link rel="stylesheet" href="/static/style.css"><script src="/static/app.js" defer></script></head>
-<body><header><a class="brand" href="/">memo</a><a class="button" href="/">返回笔记</a></header>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>回收站 · memo</title><link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="/static/themes.css"><script src="/static/theme.js"></script><script src="/static/app.js" defer></script></head>
+<body><header><a class="brand" href="/">memo</a><a class="button" href="/">返回笔记</a><button type="button" id="toggle-theme" class="secondary" aria-pressed="false">黑红主题</button></header>
 <main class="trash-main"><p class="eyebrow">TRASH</p><h1>回收站</h1><p class="muted">笔记、照片和进度记录会保留，直到你选择彻底删除。恢复笔记后可重新置顶。</p>
 {% for kind, records in [('pages', pages), ('items', items)] %}
 <section><h2>{{ '笔记页' if kind == 'pages' else '条目' }} · {{ records|length }}</h2>

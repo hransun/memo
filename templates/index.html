@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>memo · 把想法往前推进</title><link rel="stylesheet" href="/static/style.css"><script src="/static/app.js" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>memo · 把想法往前推进</title><link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="/static/themes.css"><script src="/static/theme.js"></script><script src="/static/app.js" defer></script></head>
 <body>
-<header><div class="header-start"><button id="toggle-sidebar" class="secondary" type="button" aria-controls="memo-sidebar" aria-expanded="true">收起列表</button><a class="brand" href="/">memo<span>一点一滴，留下进展。</span></a></div><span class="local"><i></i> 我的本地笔记</span></header>
+<header><div class="header-start"><button id="toggle-sidebar" class="secondary" type="button" aria-controls="memo-sidebar" aria-expanded="true">收起列表</button><a class="brand" href="/">memo<span>一点一滴，留下进展。</span></a></div><span class="local"><i></i> 我的本地笔记</span><button type="button" id="toggle-theme" class="secondary" aria-pressed="false">黑红主题</button></header>
 <div class="workspace">
 <aside id="memo-sidebar">
   <details class="upload" {% if not pages %}open{% endif %}><summary>＋ 新建笔记页</summary><form action="/pages?token={{ token }}" method="post" enctype="multipart/form-data"><label>笔记标题<input name="title" required maxlength="200" placeholder="例如：九月的想法与计划"></label><label>标签（可选，逗号分隔）<input name="tags" maxlength="310" placeholder="学习，家庭"></label><label>照片（可选）<input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label><small>JPG / PNG / WebP，最大 20 MB</small><button type="submit">创建笔记页</button></form></details>
