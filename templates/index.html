@@ -1,46 +1,152 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>memo · 把想法往前推进</title><link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="/static/themes.css"><script src="/static/theme.js"></script><script src="/static/app.js" defer></script></head>
-<body>
-<header><div class="header-start"><button id="toggle-sidebar" class="secondary" type="button" aria-controls="memo-sidebar" aria-expanded="true">收起列表</button><a class="brand" href="/">memo<span>一点一滴，留下进展。</span></a></div><span class="local"><i></i> 我的本地笔记</span><button type="button" id="toggle-theme" class="secondary" aria-pressed="false">黑红主题</button></header>
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>memo · 记下每一点进展</title>
+  <link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="/static/themes.css">
+  <script src="/static/theme.js"></script><script src="/static/app.js" defer></script>
+</head>
+<body class="memo-app">
+{% macro page_actions(p) %}
+<form action="/pages/{{ p.id }}/pin?token={{ token }}" method="post">
+  <input type="hidden" name="pinned" value="{{ 0 if p.pinned else 1 }}">
+  <button type="submit">{{ '取消置顶' if p.pinned else '置顶' }}</button>
+</form>
+<form action="/pages/{{ p.id }}/favorite?token={{ token }}" method="post">
+  <input type="hidden" name="favorite" value="{{ 0 if p.favorite else 1 }}">
+  <button type="submit">{{ '★ 已收藏 · 取消' if p.favorite else '☆ 收藏' }}</button>
+</form>
+{% endmacro %}
 <div class="workspace">
 <aside id="memo-sidebar">
-  <details class="upload" {% if not pages %}open{% endif %}><summary>＋ 新建笔记页</summary><form action="/pages?token={{ token }}" method="post" enctype="multipart/form-data"><label>笔记标题<input name="title" required maxlength="200" placeholder="例如：九月的想法与计划"></label><label>标签（可选，逗号分隔）<input name="tags" maxlength="310" placeholder="学习，家庭"></label><label>照片（可选）<input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label><small>JPG / PNG / WebP，最大 20 MB</small><button type="submit">创建笔记页</button></form></details>
-  <form class="search-form" action="/" method="get" role="search">
-    <label>搜索笔记<input name="q" value="{{ q }}" maxlength="200" placeholder="标题、条目、进度或标签"></label>
-    <label>标签<select name="tag"><option value="">全部标签</option>{% for t in all_tags %}<option value="{{ t }}" {% if t == tag %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
-    <div class="search-actions"><button type="submit">搜索</button>{% if q or tag %}<a href="/">清除筛选</a>{% endif %}<a href="/trash">回收站</a></div>
-  </form>
-  <div class="aside-heading"><span class="eyebrow">最近更新</span><span>{{ pages|length }} 页 · 置顶 {{ pinned_count }}/5</span></div>
-  {% if pinned_count >= 5 %}<p class="muted">置顶已满，请先取消一个置顶。</p>{% endif %}
-  <div class="list-filters" role="group" aria-label="筛选笔记"><button type="button" data-list-filter="all" aria-pressed="true">全部 {{ pages|length }}</button><button type="button" data-list-filter="favorites" aria-pressed="false">收藏 {{ favorite_count }}</button></div>
-  <p id="no-favorites" class="muted" hidden>当前列表没有收藏。可切回「全部」或清除搜索条件。</p>
-  <nav aria-label="笔记页">{% for p in pages %}<div class="sidebar-entry" data-favorite="{{ p.favorite }}"><a class="page-link {% if selected and selected.id == p.id %}active{% endif %}" href="/?page={{ p.id }}{% if q %}&amp;q={{ q|urlencode }}{% endif %}{% if tag %}&amp;tag={{ tag|urlencode }}{% endif %}"><strong>{% if p.pinned %}<span class="pin-label">置顶</span> {% endif %}{{ p.title }}</strong><small>更新于 {{ (p.updated_at or p.created)[:16] }}</small></a><div class="sidebar-actions"><form class="pin-form" action="/pages/{{ p.id }}/pin?token={{ token }}" method="post"><input type="hidden" name="pinned" value="{{ 0 if p.pinned else 1 }}"><button class="quiet pin-button" type="submit" aria-label="{{ '取消置顶' if p.pinned else '置顶' }}：{{ p.title }}">{{ '取消置顶' if p.pinned else '置顶' }}</button></form><form action="/pages/{{ p.id }}/favorite?token={{ token }}" method="post"><input type="hidden" name="favorite" value="{{ 0 if p.favorite else 1 }}"><button class="quiet favorite-button" type="submit" aria-label="{{ '取消收藏' if p.favorite else '收藏' }}：{{ p.title }}">{{ '★ 已收藏' if p.favorite else '☆ 收藏' }}</button></form></div></div>{% else %}<p class="muted">{% if q or tag %}没有找到匹配的笔记。{% else %}你的第一张笔记，<br>就从这里开始。{% endif %}</p>{% endfor %}</nav>
-
-  <div class="aside-note"><strong>留在自己的节奏里</strong><p>随手记录想法，<br>每一次更新记录行动。</p><small>数据保存在本机。关闭程序后，复制 data 文件夹即可备份。</small></div>
-</aside>
-<main>
-{% if selected %}
-  <div class="page-heading"><div><p class="eyebrow">NOTE / {{ '%02d'|format(selected.id) }}</p><h1>{{ selected.title }}</h1><p class="muted">创建于 {{ selected.created }} · 每一步都算数</p></div><form action="/pages/{{ selected.id }}/delete?token={{ token }}" method="post" data-confirm="将此页笔记移入回收站？照片和进度会保留，可随时恢复。"><button class="quiet danger" type="submit">移入回收站</button></form></div>
-  <div class="tag-chips">{% for t in page_tags.get(selected.id, []) %}<a href="/?tag={{ t|urlencode }}"># {{ t }}</a>{% endfor %}</div>
-  <details class="page-settings"><summary>修改标题与标签</summary><form action="/pages/{{ selected.id }}/edit?token={{ token }}" method="post"><label>笔记标题<input name="title" value="{{ selected.title }}" required maxlength="200"></label><label>标签（逗号分隔，每页最多 10 个）<input name="tags" value="{{ page_tags.get(selected.id, [])|join(', ') }}" maxlength="310" placeholder="学习，家庭"></label><button type="submit">保存标题与标签</button></form></details>
-  <div class="columns {% if not selected.image %}text-only{% endif %}">
-    {% if selected.image %}<section class="photo-section"><div class="section-heading"><h2>纸上的想法</h2><a href="/pages/{{ selected.id }}/photo" target="_blank" rel="noopener">查看大图 ↗</a></div><a class="photo-frame" href="/pages/{{ selected.id }}/photo" target="_blank" rel="noopener"><img src="/pages/{{ selected.id }}/photo" alt="{{ selected.title }}的笔记照片"></a><p class="caption">对照原图，慢慢把想法整理成行动。</p></section>{% endif %}
-    <section class="items-section"><div class="section-heading"><h2>行动与进展</h2><span>{{ done }} / {{ items|length }} 已完成</span></div><progress value="{{ done }}" max="{{ items|length or 1 }}" aria-label="笔记完成进度"></progress>
-      <form class="add-item" action="/pages/{{ selected.id }}/items?token={{ token }}" method="post"><label class="sr-only" for="new-item">新条目</label><input id="new-item" name="title" maxlength="200" required placeholder="记下一件想做的事…"><button type="submit">＋ 添加</button></form>
-      {% for item in items %}<article class="item {{ item.status }}"><div class="item-top"><span class="number">{{ '%02d'|format(loop.index) }}</span><h3>{{ item.title }}</h3><span class="badge {{ item.status }}">{{ statuses[item.status] }}</span></div>
-      <details><summary>更新条目 <span>{{ item.updates|length }} 条记录</span></summary><div class="item-body">
-        <form action="/items/{{ item.id }}/edit?token={{ token }}" method="post"><label>条目内容<input name="title" value="{{ item.title }}" required maxlength="200"></label><div class="edit-row"><label>当前状态<select name="status">{% for key, label in statuses.items() %}<option value="{{ key }}" {% if item.status == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><button class="secondary" type="submit">保存修改</button></div></form>
-        <form class="update-form" action="/items/{{ item.id }}/updates?token={{ token }}" method="post"><label>这次有什么进展？<textarea name="body" rows="3" required maxlength="5000" placeholder="例如：今天读到第六章，明天继续。"></textarea></label><button type="submit">记录进展</button></form>
-        <div class="timeline">{% for update in item.updates %}<div class="entry"><time>{{ update.created }}</time><p>{{ update.body }}</p></div>{% else %}<p class="muted">还没有进度记录，写下你的第一步吧。</p>{% endfor %}</div>
-        <form action="/items/{{ item.id }}/delete?token={{ token }}" method="post" data-confirm="将这个条目移入回收站？进度记录会保留，可随时恢复。"><button class="quiet danger" type="submit">移入回收站</button></form>
-      </div></details>{% if item.updates %}<p class="latest">{{ item.updates[0].body }}</p><small class="latest-date">{{ item.updates[0].created }}</small>{% endif %}</article>{% else %}<div class="list-empty"><span>✎</span><h3>从一件小事开始</h3><p>把第一条想法添加进来，<br>随时记录你的进展。</p></div>{% endfor %}
-    </section>
+  <div class="sidebar-top">
+    <a class="brand" href="/">memo<span class="brand-dot">.</span></a>
+    <div class="top-actions">
+      <button class="icon-button" type="button" data-open-dialog="new-memo" aria-label="新建 memo" title="新建 memo">＋</button>
+      <details class="more-menu sidebar-menu">
+        <summary class="icon-button" aria-label="更多功能" title="更多功能">⋯</summary>
+        <div class="menu-panel">
+          <button type="button" data-open-dialog="find-memo">搜索与标签</button>
+          <a href="/?view=favorites">只看收藏</a>
+          <a href="/trash">回收站</a>
+          <button type="button" id="toggle-theme" aria-pressed="false">黑红主题</button>
+        </div>
+      </details>
+    </div>
   </div>
-{% elif q or tag %}
-  <div class="empty"><h1>没有找到匹配的笔记</h1><p>试试其他关键词或标签。</p><a class="button" href="/">查看全部笔记</a></div>
-{% else %}
-  <div class="empty"><span class="paper-mark">✎</span><p class="eyebrow">YOUR THOUGHTS, IN MOTION</p><h1>让每一个想法，<br>有下一步。</h1><p>新建一页笔记，整理想做的事。照片可以不上传。<br>每完成一点，就为自己留下一条记录。</p><div class="steps"><span>01 新建笔记</span><span>02 整理条目</span><span>03 记录进展</span></div><p class="muted">从左侧「新建笔记页」开始。</p></div>
+  {% if view != 'recent' or q or tag %}<div class="filter-context"><span>{{ '搜索结果' if q or tag else '收藏' if view == 'favorites' else '全部 memo' }}</span><a href="/">返回最近</a></div>{% endif %}
+  <nav aria-label="笔记页">
+  {% for heading, group in [('置顶', pinned_pages), ('最近更新' if view == 'recent' and not q and not tag else '笔记', recent_pages)] %}
+    {% if group %}<div class="nav-heading">{{ heading }}</div>{% endif %}
+    {% for p in group %}
+    <div class="sidebar-entry" data-favorite="{{ p.favorite }}">
+      <a class="page-link {% if selected and selected.id == p.id %}active{% endif %}" {% if selected and selected.id == p.id %}aria-current="page"{% endif %} href="/?page={{ p.id }}{% if view != 'recent' %}&amp;view={{ view }}{% endif %}{% if q %}&amp;q={{ q|urlencode }}{% endif %}{% if tag %}&amp;tag={{ tag|urlencode }}{% endif %}">
+        <strong>{{ p.title }}</strong>
+      </a>
+      <details class="more-menu row-menu">
+        <summary class="icon-button" aria-label="{{ p.title }}的操作" title="笔记操作">⋯</summary>
+        <div class="menu-panel">{{ page_actions(p) }}</div>
+      </details>
+    </div>
+    {% endfor %}
+  {% endfor %}
+  {% if not pages %}<p class="muted nav-empty">{{ '没有找到匹配的笔记' if q or tag else '还没有收藏的 memo' if view == 'favorites' else '记下你的第一件事。' }}</p>{% endif %}
+  </nav>
+  {% if view == 'recent' and not q and not tag %}<a class="all-link" href="/?view=all{% if selected %}&amp;page={{ selected.id }}{% endif %}">查看全部 <span>↗</span></a>{% endif %}
+</aside>
+<main class="memo-main">
+  <div class="main-toolbar"><button id="toggle-sidebar" class="icon-button" type="button" aria-controls="memo-sidebar" aria-expanded="true">收起列表</button></div>
+  {% if selected %}
+  <div class="memo-content">
+    <div class="page-heading">
+      <h1>{{ selected.title }}</h1>
+      <details class="more-menu">
+        <summary class="icon-button" aria-label="当前 memo 的更多操作" title="更多操作">⋯</summary>
+        <div class="menu-panel">
+          <button type="button" data-open-dialog="edit-memo">修改标题与标签</button>
+          {{ page_actions(selected) }}
+          <button type="button" data-open-dialog="add-task">添加待办</button>
+          {% if selected.image %}<a href="/pages/{{ selected.id }}/photo" target="_blank" rel="noopener">查看原图</a>{% endif %}
+          <hr>
+          <form action="/pages/{{ selected.id }}/delete?token={{ token }}" method="post" data-confirm="将此 memo 移入回收站？内容可恢复。"><button class="danger" type="submit">移入回收站</button></form>
+        </div>
+      </details>
+    </div>
+    <form class="composer" action="/pages/{{ selected.id }}/entries?token={{ token }}" method="post">
+      <label class="sr-only" for="memo-entry">记下新的进展</label>
+      <textarea id="memo-entry" name="body" rows="3" maxlength="5000" required placeholder="记一笔…"></textarea>
+      <div class="composer-footer"><button type="submit">保存</button></div>
+    </form>
+    {% if selected.image %}<details class="photo-section"><summary>笔记照片</summary><a href="/pages/{{ selected.id }}/photo" target="_blank" rel="noopener"><img src="/pages/{{ selected.id }}/photo" alt="{{ selected.title }}的笔记照片"></a></details>{% endif %}
+    {% if items %}
+    <details class="tasks-section">
+      <summary>待办 <span>{{ done }} / {{ items|length }}</span></summary>
+      <div class="tasks-content">
+      {% for item in items %}
+        <article class="item {{ item.status }}">
+          <div class="item-top"><h3>{{ item.title }}</h3><span class="badge {{ item.status }}">{{ statuses[item.status] }}</span></div>
+          <details><summary>更新条目</summary><div class="item-body">
+            <form action="/items/{{ item.id }}/edit?token={{ token }}" method="post">
+              <label>内容<input name="title" value="{{ item.title }}" required maxlength="200"></label>
+              <div class="edit-row"><label>状态<select name="status">{% for key, label in statuses.items() %}<option value="{{ key }}" {% if item.status == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><button class="secondary" type="submit">保存修改</button></div>
+            </form>
+            <form class="update-form" action="/items/{{ item.id }}/updates?token={{ token }}" method="post"><label>记录这项待办的进展<textarea name="body" rows="2" required maxlength="5000"></textarea></label><button type="submit">记录进展</button></form>
+            <form action="/items/{{ item.id }}/delete?token={{ token }}" method="post" data-confirm="将这项待办移入回收站？进度可恢复。"><button class="quiet danger" type="submit">移入回收站</button></form>
+          </div></details>
+        </article>
+      {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+    {% if timeline %}
+    <section class="history" aria-label="进度记录">
+      {% for entry in timeline %}
+      <article class="history-entry">
+        <time>{{ entry.created[:16] }}</time>
+        <div>{% if entry.source %}<span class="entry-source">{{ entry.source }}</span>{% endif %}<p>{{ entry.body }}</p></div>
+      </article>
+      {% endfor %}
+    </section>
+    {% endif %}
+  </div>
+  {% elif q or tag or view == 'favorites' %}
+    <div class="empty"><h1>{{ '还没有收藏' if view == 'favorites' and not q and not tag else '没有找到匹配的笔记' }}</h1><a class="quiet" href="/">返回最近的 memo</a></div>
+  {% else %}
+    <div class="empty"><h1>从一件小事开始。</h1><button type="button" data-open-dialog="new-memo">新建 memo</button></div>
+  {% endif %}
+</main>
+</div>
+
+<dialog id="new-memo">
+  <div class="dialog-heading"><h2>新建 memo</h2><button type="button" class="icon-button" data-close-dialog aria-label="关闭">×</button></div>
+  <form action="/pages?token={{ token }}" method="post" enctype="multipart/form-data">
+    <label>标题<input name="title" required maxlength="200" placeholder="想记些什么？" autofocus></label>
+    <details class="optional-fields"><summary>照片与标签（可选）</summary><label>标签<input name="tags" maxlength="310" placeholder="用逗号分隔"></label><label>照片<input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label><small class="muted">JPG / PNG / WebP，最大 20 MB</small></details>
+    <button type="submit">创建</button>
+  </form>
+</dialog>
+<dialog id="find-memo">
+  <div class="dialog-heading"><h2>查找 memo</h2><button type="button" class="icon-button" data-close-dialog aria-label="关闭">×</button></div>
+  <form action="/" method="get" role="search">
+    <input type="hidden" name="view" value="all">
+    <label>搜索<input name="q" value="{{ q }}" maxlength="200" placeholder="标题、条目或进度" autofocus></label>
+    <label>标签<select name="tag"><option value="">全部标签</option>{% for t in all_tags %}<option value="{{ t }}" {% if t == tag %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
+    <button type="submit">查找</button>
+  </form>
+</dialog>
+{% if selected %}
+<dialog id="edit-memo">
+  <div class="dialog-heading"><h2>修改 memo</h2><button type="button" class="icon-button" data-close-dialog aria-label="关闭">×</button></div>
+  <form action="/pages/{{ selected.id }}/edit?token={{ token }}" method="post">
+    <label>标题<input name="title" value="{{ selected.title }}" required maxlength="200" autofocus></label>
+    <label>标签<input name="tags" value="{{ page_tags.get(selected.id, [])|join(', ') }}" maxlength="310" placeholder="用逗号分隔，最多 10 个"></label>
+    <button type="submit">保存</button>
+  </form>
+</dialog>
+<dialog id="add-task">
+  <div class="dialog-heading"><h2>添加待办</h2><button type="button" class="icon-button" data-close-dialog aria-label="关闭">×</button></div>
+  <form action="/pages/{{ selected.id }}/items?token={{ token }}" method="post"><label>行动与进展<input name="title" required maxlength="200" placeholder="记下一件想做的事…" autofocus></label><button type="submit">添加</button></form>
+</dialog>
 {% endif %}
-</main></div><div id="notice" role="status" aria-live="polite"></div>
+<div id="notice" role="status" aria-live="polite"></div>
 </body></html>

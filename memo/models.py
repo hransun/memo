@@ -43,6 +43,10 @@ class Store:
             for table in ('pages', 'items'):
                 if 'deleted_at' not in {row['name'] for row in db.execute(f'PRAGMA table_info({table})')}:
                     db.execute(f'ALTER TABLE {table} ADD COLUMN deleted_at TEXT')
+            db.execute('''CREATE TABLE IF NOT EXISTS page_entries (
+                id INTEGER PRIMARY KEY,
+                page_id INTEGER NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+                body TEXT NOT NULL, created TEXT NOT NULL)''')
             db.execute('''CREATE TABLE IF NOT EXISTS page_tags (
                 page_id INTEGER NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
                 tag TEXT NOT NULL COLLATE NOCASE, PRIMARY KEY(page_id,tag))''')
@@ -128,7 +132,8 @@ def search_pages(db, parameters):
                 OR EXISTS(SELECT 1 FROM items i WHERE i.page_id=p.id AND i.deleted_at IS NULL
                     AND (instr(lower(i.title),lower(?))>0 OR EXISTS(
                         SELECT 1 FROM updates u WHERE u.item_id=i.id AND instr(lower(u.body),lower(?))>0)))
-                OR EXISTS(SELECT 1 FROM page_tags t WHERE t.page_id=p.id AND instr(lower(t.tag),lower(?))>0))
+                OR EXISTS(SELECT 1 FROM page_tags t WHERE t.page_id=p.id AND instr(lower(t.tag),lower(?))>0)
+                OR EXISTS(SELECT 1 FROM page_entries e WHERE e.page_id=p.id AND instr(lower(e.body),lower(?))>0))
             AND (?='' OR EXISTS(SELECT 1 FROM page_tags t WHERE t.page_id=p.id AND t.tag=? COLLATE NOCASE))
             ORDER BY pinned DESC, coalesce(updated_at,created) DESC, id DESC''', parameters).fetchall()
 
@@ -172,3 +177,11 @@ def list_updates(db, item_id):
 
 def count_pins(db):
     return db.execute('SELECT count(*) FROM pages WHERE pinned=1').fetchone()
+
+
+def insert_page_entry(db, page_id, body, created):
+    return db.execute('INSERT INTO page_entries(page_id,body,created) VALUES (?,?,?)', (page_id, body, created))
+
+
+def list_page_entries(db, page_id):
+    return db.execute('SELECT * FROM page_entries WHERE page_id=? ORDER BY id DESC', (page_id,)).fetchall()

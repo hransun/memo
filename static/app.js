@@ -45,20 +45,20 @@ if (sidebar && sidebarToggle) {
   setSidebarHidden(readPreference('memo-sidebar-hidden', 'false') === 'true');
 }
 
-function setListFilter(filter) {
-  const favoritesOnly = filter === 'favorites';
-  let visibleCount = 0;
-  document.querySelectorAll('.sidebar-entry').forEach(entry => {
-    entry.hidden = favoritesOnly && entry.dataset.favorite !== '1';
-    if (!entry.hidden) visibleCount++;
+
+document.querySelectorAll('[data-open-dialog]').forEach(button => {
+  button.addEventListener('click', () => {
+    document.getElementById(button.dataset.openDialog).showModal();
   });
-  document.querySelectorAll('[data-list-filter]').forEach(button => {
-    button.setAttribute('aria-pressed', String(button.dataset.listFilter === filter));
-  });
-  document.querySelector('#no-favorites').hidden = !favoritesOnly || visibleCount > 0;
-  savePreference('memo-list-filter', favoritesOnly ? 'favorites' : 'all');
-}
-document.querySelectorAll('[data-list-filter]').forEach(button => {
-  button.addEventListener('click', () => setListFilter(button.dataset.listFilter));
 });
-if (sidebar) setListFilter(readPreference('memo-list-filter', 'all'));
+document.querySelectorAll('[data-close-dialog]').forEach(button => {
+  button.addEventListener('click', () => button.closest('dialog').close());
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') document.querySelectorAll('.more-menu[open]').forEach(menu => menu.open = false);
+});
+document.addEventListener('click', event => {
+  document.querySelectorAll('.more-menu[open]').forEach(menu => {
+    if (!menu.contains(event.target)) menu.open = false;
+  });
+});

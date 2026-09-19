@@ -58,10 +58,16 @@ class MemoService:
         models.clear_tags(db, page_id)
         models.insert_tags(db, [(page_id, tag) for tag in tags])
 
-    def home(self, page=None, q='', tag=''):
+    def home(self, page=None, q='', tag='', view='recent'):
         q, tag = (q.strip(), tag.strip())
+        if view not in ('recent', 'all', 'favorites'):
+            view = 'recent'
         with self.store.connection() as db:
-            pages = models.search_pages(db, (q, q, q, q, q, tag, tag))
+            pages = models.search_pages(db, (q, q, q, q, q, q, tag, tag))
+            favorite_count = sum(bool(p['favorite']) for p in pages)
+            total_count = len(pages)
+            if view == 'favorites':
+                pages = [p for p in pages if p['favorite']]
             selected = self.require(db, 'pages', page) if page else pages[0] if pages else None
             tag_rows = models.list_tag_rows(db)
             page_tags = {}
@@ -70,11 +76,20 @@ class MemoService:
             all_tags = [row[0] for row in models.list_active_tags(db)]
             pinned_count = models.count_active_pins(db)[0]
             items = []
+            timeline = []
             if selected:
+                timeline = [dict(e, source='') for e in models.list_page_entries(db, selected['id'])]
                 for row in models.list_items(db, selected['id']):
                     item = dict(row)
                     item['updates'] = models.list_updates(db, row['id'])
                     items.append(item)
+                    timeline.extend(dict(u, source=row['title']) for u in item['updates'])
+            timeline.sort(key=lambda e: (e['created'], e['id']), reverse=True)
+            pinned_pages = [p for p in pages if p['pinned']]
+            recent_pages = [p for p in pages if not p['pinned']]
+            if view == 'recent' and not q and not tag:
+                recent_pages = recent_pages[:5]
+            pages = pinned_pages + recent_pages
         return {
             'pages': pages,
             'selected': selected,
@@ -82,7 +97,12 @@ class MemoService:
             'statuses': STATUSES,
             'done': sum((item['status'] == 'done' for item in items)),
             'pinned_count': pinned_count,
-            'favorite_count': sum((bool(p['favorite']) for p in pages)),
+            'favorite_count': favorite_count,
+            'total_count': total_count,
+            'pinned_pages': pinned_pages,
+            'recent_pages': recent_pages,
+            'timeline': timeline,
+            'view': view,
             'q': q,
             'tag': tag,
             'all_tags': all_tags,
@@ -230,3 +250,13 @@ class MemoService:
             models.trash_item(db, self.now(), item_id)
             self.touch_page(db, item['page_id'])
         return item['page_id']
+
+
+    def add_page_entry(self, page_id, body):
+        body = self.clean(body, 5000)
+        with self.store.connection() as db:
+            self.require(db, 'pages', page_id)
+            timestamp = datetime.now().astimezone().strftime('%Y-%m-%d %H:%M:%S.%f')
+            models.insert_page_entry(db, page_id, body, timestamp)
+            self.touch_page(db, page_id)
+        return page_id

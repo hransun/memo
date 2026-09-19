@@ -18,8 +18,8 @@ def redirect(page_id=None):
 
 
 @router.get('/')
-def home(request: Request, page: int | None = None, q: str = Query('', max_length=200), tag: str = Query('', max_length=30)):
-    return render(request, 'index.html', service(request).home(page, q, tag))
+def home(request: Request, page: int | None = None, q: str = Query('', max_length=200), tag: str = Query('', max_length=30), view: str = Query('recent', max_length=20)):
+    return render(request, 'index.html', service(request).home(page, q, tag, view))
 
 
 @router.post('/pages')
@@ -103,3 +103,9 @@ def restore_record(request: Request, kind: str, record_id: int):
 def purge_record(request: Request, kind: str, record_id: int):
     service(request).purge_record(kind, record_id)
     return RedirectResponse('/trash?saved=1', status_code=303)
+
+
+@router.post('/pages/{page_id}/entries')
+def add_page_entry(request: Request, page_id: int, body: str = Form(...)):
+    service(request).add_page_entry(page_id, body)
+    return redirect(page_id)
