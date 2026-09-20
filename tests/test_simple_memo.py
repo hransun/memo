@@ -77,5 +77,50 @@ class SimpleMemoTests(unittest.TestCase):
             self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
 
 
+    def test_edit_saved_record_preserves_identity_and_updates_search_and_recency(self):
+        page = self.service.create_page('journal')
+        self.service.add_page_entry(page, 'original')
+        original = self.service.home(page)['timeline'][0]
+        self.service.create_page('newer')
+        url = f"/entries/{original['id']}/edit"
+        result = self.post(url, data={'body': 'edited <text>\nsecond line'})
+        self.assertEqual(result.status_code, 200)
+        self.assertIn('edited &lt;text&gt;', result.text)
+        edited = self.service.home(page)['timeline'][0]
+        self.assertEqual(edited['id'], original['id'])
+        self.assertEqual(edited['created'], original['created'])
+        self.assertEqual(edited['body'], 'edited <text>\nsecond line')
+        self.assertEqual(self.service.home()['pages'][0]['id'], page)
+        self.assertEqual(len(self.service.home(q='original')['pages']), 0)
+        self.assertEqual(len(self.service.home(q='second line')['pages']), 1)
+        for value in [' ', 'x' * 5001]:
+            self.assertEqual(self.post(url, data={'body': value}).status_code, 400)
+        self.assertEqual(self.service.home(page)['timeline'][0]['body'], edited['body'])
+        self.assertEqual(self.client.post(url, data={'body': 'unauthorized'}).status_code, 403)
+        self.assertEqual(self.post('/entries/999999/edit', data={'body': 'missing'}).status_code, 404)
+        self.service.delete_page(page)
+        self.assertEqual(self.post(url, data={'body': 'blocked'}).status_code, 404)
+        self.service.restore_record('pages', page)
+        with TestClient(create_app(Path(self.temp.name))) as restarted:
+            self.assertIn('edited &lt;text&gt;', restarted.get(f'/?page={page}').text)
+
+    def test_edit_old_task_progress_uses_its_own_record_and_checks_parent(self):
+        page = self.service.create_page('journal')
+        self.service.add_item(page, 'task')
+        item = self.service.home(page)['items'][0]['id']
+        self.service.add_update(item, 'old progress')
+        self.service.add_page_entry(page, 'separate direct entry')
+        update = self.service.home(page)['items'][0]['updates'][0]
+        url = f"/updates/{update['id']}/edit"
+        result = self.post(url, data={'body': 'corrected progress'})
+        self.assertEqual(result.status_code, 200)
+        self.assertIn(url, result.text)
+        self.assertIn('separate direct entry', result.text)
+        self.assertIn('corrected progress', result.text)
+        self.assertEqual(self.post(url, data={'body': ''}).status_code, 400)
+        self.service.delete_item(item)
+        self.assertEqual(self.post(url, data={'body': 'blocked'}).status_code, 404)
+
+
 if __name__ == '__main__':
     unittest.main()

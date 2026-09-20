@@ -129,3 +129,8 @@ header { display: flex; align-items: center; justify-content: space-between; pad
 .entry-media audio, .entry-media video { display: block; width: 100%; max-width: 100%; border-radius: 8px; }
 .entry-media video { max-height: 480px; background: #111; }
 .media-download { display: inline-block; margin-top: 8px; }
+
+.entry-editor { margin-top: 10px; }
+.entry-editor > summary { width: fit-content; color: var(--muted); font-size: 12px; padding: 5px 0; }
+.entry-editor > form { margin-top: 12px; }
+.entry-edit-actions { display: flex; align-items: center; gap: 18px; }

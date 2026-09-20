@@ -149,5 +149,21 @@ class AttachmentTests(unittest.TestCase):
             self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
 
 
+    def test_edit_caption_preserves_attachment_and_allows_image_only(self):
+        self.upload('photo.png', photo_bytes(), 'old caption')
+        entry = self.entry()
+        url = f"/entries/{entry['id']}/edit?token={self.app.state.token}"
+        attachment_url = f"/entries/{entry['id']}/attachment"
+        original = self.client.get(attachment_url).content
+        for caption in ['new caption', '']:
+            self.assertEqual(self.client.post(url, data={'body': caption}).status_code, 200)
+            current = self.entry()
+            self.assertEqual(current['body'], caption)
+            self.assertEqual(current['created'], entry['created'])
+            self.assertEqual(current['attachment'], entry['attachment'])
+            self.assertEqual(self.client.get(attachment_url).content, original)
+        self.assertEqual(len(list(self.service.uploads.iterdir())), 1)
+
+
 if __name__ == '__main__':
     unittest.main()

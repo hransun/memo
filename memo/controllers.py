@@ -128,3 +128,13 @@ def entry_attachment(request: Request, entry_id: int):
     path, media_type = service(request).entry_attachment(entry_id)
     # Starlette serves bounded chunks and handles Range / If-Range / 206 / 416.
     return FileResponse(path, media_type=media_type)
+
+
+@router.post('/entries/{entry_id}/edit')
+def edit_page_entry(request: Request, entry_id: int, body: str = Form('')):
+    return redirect(service(request).edit_page_entry(entry_id, body))
+
+
+@router.post('/updates/{update_id}/edit')
+def edit_update(request: Request, update_id: int, body: str = Form('')):
+    return redirect(service(request).edit_update(update_id, body))

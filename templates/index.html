@@ -125,7 +125,15 @@
             <a class="quiet media-download" href="/entries/{{ entry.id }}/attachment" download="{{ 'audio.mp3' if entry.media_type == 'audio/mpeg' else 'video.mp4' }}">下载文件</a>
           </div>
           {% endif %}
-          {% endif %}</div>
+          {% endif %}
+          <details class="entry-editor">
+            <summary>编辑</summary>
+            <form action="/{{ entry.edit_kind }}/{{ entry.id }}/edit?token={{ token }}" method="post">
+              <label>修改记录<textarea name="body" rows="4" maxlength="5000" {% if not entry.attachment %}required{% endif %}>{{ entry.body }}</textarea></label>
+              <div class="entry-edit-actions"><button type="submit">保存修改</button><button type="button" class="quiet" data-cancel-entry-edit>取消</button></div>
+            </form>
+          </details>
+        </div>
       </article>
       {% endfor %}
     </section>

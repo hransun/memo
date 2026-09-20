@@ -192,3 +192,15 @@ def list_page_entries(db, page_id):
 
 def find_page_entry(db, entry_id):
     return db.execute('SELECT * FROM page_entries WHERE id=?', (entry_id,)).fetchone()
+
+
+def update_page_entry(db, entry_id, body):
+    return db.execute('UPDATE page_entries SET body=? WHERE id=?', (body, entry_id))
+
+
+def find_update(db, update_id):
+    return db.execute('SELECT * FROM updates WHERE id=?', (update_id,)).fetchone()
+
+
+def update_progress(db, update_id, body):
+    return db.execute('UPDATE updates SET body=? WHERE id=?', (body, update_id))

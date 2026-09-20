@@ -74,12 +74,12 @@ class MemoService:
             items = []
             timeline = []
             if selected:
-                timeline = [dict(e, source='') for e in models.list_page_entries(db, selected['id'])]
+                timeline = [dict(e, source='', edit_kind='entries') for e in models.list_page_entries(db, selected['id'])]
                 for row in models.list_items(db, selected['id']):
                     item = dict(row)
                     item['updates'] = models.list_updates(db, row['id'])
                     items.append(item)
-                    timeline.extend(dict(u, source=row['title']) for u in item['updates'])
+                    timeline.extend(dict(u, source=row['title'], edit_kind='updates') for u in item['updates'])
             timeline.sort(key=lambda e: (e['created'], e['id']), reverse=True)
             pinned_pages = [p for p in pages if p['pinned']]
             recent_pages = [p for p in pages if not p['pinned']]
@@ -264,3 +264,29 @@ class MemoService:
         if not path.is_file():
             raise MemoError(404, '附件文件不存在，请检查本地备份。')
         return path, entry['media_type']
+
+    def edit_page_entry(self, entry_id, body):
+        with self.store.connection() as db:
+            entry = models.find_page_entry(db, entry_id)
+            if entry is None:
+                raise MemoError(404, '这条记录不存在。')
+            self.require(db, 'pages', entry['page_id'])
+            body = body.strip()
+            if body or not entry['attachment']:
+                body = self.clean(body, 5000)
+            if body != entry['body']:
+                models.update_page_entry(db, entry_id, body)
+                self.touch_page(db, entry['page_id'])
+        return entry['page_id']
+
+    def edit_update(self, update_id, body):
+        body = self.clean(body, 5000)
+        with self.store.connection() as db:
+            update = models.find_update(db, update_id)
+            if update is None:
+                raise MemoError(404, '这条记录不存在。')
+            item = self.require(db, 'items', update['item_id'])
+            if body != update['body']:
+                models.update_progress(db, update_id, body)
+                self.touch_page(db, item['page_id'])
+        return item['page_id']

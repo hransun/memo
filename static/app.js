@@ -155,3 +155,13 @@ document.querySelectorAll('.entry-media audio, .entry-media video').forEach(play
     player.closest('.entry-media').querySelector('.media-error').hidden = false;
   });
 });
+
+// Cancel restores the saved text and closes just this record's editor.
+document.querySelectorAll('[data-cancel-entry-edit]').forEach(button => {
+  button.addEventListener('click', () => {
+    button.closest('form').reset();
+    const editor = button.closest('.entry-editor');
+    editor.open = false;
+    editor.querySelector('summary').focus();
+  });
+});
