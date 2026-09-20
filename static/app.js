@@ -103,6 +103,40 @@ if (composer) {
     preview.querySelector('.attachment-name').textContent = file.name;
     preview.hidden = false;
   }
+  // Handle only image pastes in the composer; ordinary text keeps native behavior.
+  body.addEventListener('paste', event => {
+    const images = Array.from(event.clipboardData?.items || [])
+      .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
+      .map(item => item.getAsFile()).filter(Boolean);
+    if (!images.length) return;
+    event.preventDefault();
+    function showMessage(message) {
+      feedback.textContent = message;
+      feedback.hidden = false;
+    }
+    if (attachment.files.length) {
+      showMessage('已有附件，请先移除，再粘贴新图片。');
+      return;
+    }
+    if (images.length > 1) {
+      showMessage('每条记录支持一张图片，请一次粘贴一张。');
+      return;
+    }
+    const file = images[0];
+    const extension = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }[file.type];
+    if (!extension || !file.size || file.size > 20 * 1024 * 1024) {
+      showMessage('请粘贴 JPG、PNG 或 WebP 图片，最大 20 MB。');
+      return;
+    }
+    try {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([file], `pasted-image.${extension}`, { type: file.type }));
+      attachment.files = transfer.files;
+      updateAttachment();
+    } catch {
+      showMessage('当前浏览器无法粘贴图片，请使用「添加附件」选择文件。');
+    }
+  });
   attachment.addEventListener('change', updateAttachment);
   body.addEventListener('input', () => body.setCustomValidity(''));
   composer.querySelector('[data-remove-attachment]').addEventListener('click', () => {

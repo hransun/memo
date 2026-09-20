@@ -74,7 +74,7 @@
     </div>
     <form class="composer" enctype="multipart/form-data" action="/pages/{{ selected.id }}/entries?token={{ token }}" method="post">
       <label class="sr-only" for="memo-entry">记下新的进展</label>
-      <textarea id="memo-entry" name="body" rows="3" maxlength="5000" placeholder="记一笔…"></textarea>
+      <textarea id="memo-entry" name="body" rows="3" maxlength="5000" placeholder="记一笔…也可以直接粘贴图片" aria-describedby="attachment-hint"></textarea>
       <div class="entry-preview" hidden>
         <img alt="待上传的图片预览" hidden>
         <span class="attachment-name"></span>
