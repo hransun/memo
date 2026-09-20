@@ -1,15 +1,11 @@
 """Service layer: validation and memo workflows, without HTTP or template code."""
 from datetime import datetime
-from io import BytesIO
-import uuid
-
-from PIL import Image, ImageOps, UnidentifiedImageError
 
 from . import models
 from .errors import MemoError
+from .attachments import save_photo, save_attachment
 
 STATUSES = {'todo': '待办', 'doing': '进行中', 'done': '已完成'}
-MAX_PHOTO_BYTES = 20 * 1024 * 1024
 
 
 class MemoService:
@@ -112,23 +108,7 @@ class MemoService:
     def create_page(self, title, photo=None, tags=''):
         title = self.clean(title)
         tags = self.parse_tags(tags)
-        filename = ''
-        if photo is not None:
-            content = photo
-            if len(content) > MAX_PHOTO_BYTES:
-                raise MemoError(400, '照片不能超过 20 MB。')
-            try:
-                with Image.open(BytesIO(content)) as source:
-                    if source.format not in {'JPEG', 'PNG', 'WEBP'}:
-                        raise MemoError(400, '请选择 JPG、PNG 或 WebP 照片。')
-                    if source.width * source.height > 40000000:
-                        raise MemoError(400, '照片尺寸过大，请先缩小后上传。')
-                    source.load()
-                    picture = ImageOps.exif_transpose(source).convert('RGB')
-                    filename = f'{uuid.uuid4().hex}.jpg'
-                    picture.save(self.uploads / filename, quality=95)
-            except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
-                raise MemoError(400, '无法读取这张照片，请选择有效的 JPG、PNG 或 WebP 文件。')
+        filename = save_photo(self.uploads, photo)
         try:
             with self.store.connection() as db:
                 page_id = models.insert_page(db, title, filename, self.now())
@@ -191,7 +171,10 @@ class MemoService:
             row = self.require(db, kind, record_id, include_deleted=True)
             if not row['deleted_at']:
                 raise MemoError(400, '请先将记录移入回收站。')
+            attachments = [e['attachment'] for e in models.list_page_entries(db, record_id) if e['attachment']] if kind == 'pages' else []
             models.purge_record(db, kind, record_id)
+        for filename in attachments:
+            (self.uploads / filename).unlink(missing_ok=True)
         if kind == 'pages' and row['image']:
             (self.uploads / row['image']).unlink(missing_ok=True)
         return None
@@ -252,11 +235,32 @@ class MemoService:
         return item['page_id']
 
 
-    def add_page_entry(self, page_id, body):
-        body = self.clean(body, 5000)
-        with self.store.connection() as db:
-            self.require(db, 'pages', page_id)
-            timestamp = datetime.now().astimezone().strftime('%Y-%m-%d %H:%M:%S.%f')
-            models.insert_page_entry(db, page_id, body, timestamp)
-            self.touch_page(db, page_id)
+    def add_page_entry(self, page_id, body, attachment=None, filename=''):
+        body = body.strip()
+        if body or attachment is None:
+            body = self.clean(body, 5000)
+        saved_name, media_type = '', ''
+        try:
+            with self.store.connection() as db:
+                self.require(db, 'pages', page_id)
+                if attachment is not None:
+                    saved_name, media_type = save_attachment(self.uploads, attachment, filename)
+                timestamp = datetime.now().astimezone().strftime('%Y-%m-%d %H:%M:%S.%f')
+                models.insert_page_entry(db, page_id, body, timestamp, saved_name, media_type)
+                self.touch_page(db, page_id)
+        except BaseException:
+            if saved_name:
+                (self.uploads / saved_name).unlink(missing_ok=True)
+            raise
         return page_id
+
+    def entry_attachment(self, entry_id):
+        with self.store.connection() as db:
+            entry = models.find_page_entry(db, entry_id)
+            if entry is None or not entry['attachment']:
+                raise MemoError(404, '这条记录没有附件。')
+            self.require(db, 'pages', entry['page_id'])
+        path = self.uploads / entry['attachment']
+        if not path.is_file():
+            raise MemoError(404, '附件文件不存在，请检查本地备份。')
+        return path, entry['media_type']

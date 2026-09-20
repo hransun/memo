@@ -47,6 +47,9 @@ class Store:
                 id INTEGER PRIMARY KEY,
                 page_id INTEGER NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
                 body TEXT NOT NULL, created TEXT NOT NULL)''')
+            for column in ('attachment', 'media_type'):
+                if column not in {row['name'] for row in db.execute('PRAGMA table_info(page_entries)')}:
+                    db.execute(f"ALTER TABLE page_entries ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
             db.execute('''CREATE TABLE IF NOT EXISTS page_tags (
                 page_id INTEGER NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
                 tag TEXT NOT NULL COLLATE NOCASE, PRIMARY KEY(page_id,tag))''')
@@ -179,9 +182,13 @@ def count_pins(db):
     return db.execute('SELECT count(*) FROM pages WHERE pinned=1').fetchone()
 
 
-def insert_page_entry(db, page_id, body, created):
-    return db.execute('INSERT INTO page_entries(page_id,body,created) VALUES (?,?,?)', (page_id, body, created))
+def insert_page_entry(db, page_id, body, created, attachment='', media_type=''):
+    return db.execute('INSERT INTO page_entries(page_id,body,created,attachment,media_type) VALUES (?,?,?,?,?)', (page_id, body, created, attachment, media_type))
 
 
 def list_page_entries(db, page_id):
     return db.execute('SELECT * FROM page_entries WHERE page_id=? ORDER BY id DESC', (page_id,)).fetchall()
+
+
+def find_page_entry(db, entry_id):
+    return db.execute('SELECT * FROM page_entries WHERE id=?', (entry_id,)).fetchone()

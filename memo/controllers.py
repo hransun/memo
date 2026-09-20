@@ -3,7 +3,7 @@ from fastapi import APIRouter, Request, UploadFile, File, Form, Query
 from fastapi.responses import FileResponse, RedirectResponse
 from starlette.concurrency import run_in_threadpool
 
-from .services import MAX_PHOTO_BYTES
+from .attachments import MAX_PHOTO_BYTES
 from .views import render
 
 router = APIRouter()
@@ -22,8 +22,7 @@ def home(request: Request, page: int | None = None, q: str = Query('', max_lengt
     return render(request, 'index.html', service(request).home(page, q, tag, view))
 
 
-@router.post('/pages')
-async def create_page(request: Request, title: str = Form(...), photo: UploadFile | None = File(None), tags: str = Form('')):
+async def read_photo(photo):
     content = None
     if photo is not None:
         try:
@@ -31,6 +30,12 @@ async def create_page(request: Request, title: str = Form(...), photo: UploadFil
                 content = await photo.read(MAX_PHOTO_BYTES + 1)
         finally:
             await photo.close()
+    return content
+
+
+@router.post('/pages')
+async def create_page(request: Request, title: str = Form(...), photo: UploadFile | None = File(None), tags: str = Form('')):
+    content = await read_photo(photo)
     page_id = await run_in_threadpool(service(request).create_page, title, content, tags)
     return redirect(page_id)
 
@@ -106,6 +111,20 @@ def purge_record(request: Request, kind: str, record_id: int):
 
 
 @router.post('/pages/{page_id}/entries')
-def add_page_entry(request: Request, page_id: int, body: str = Form(...)):
-    service(request).add_page_entry(page_id, body)
+async def add_page_entry(request: Request, page_id: int, body: str = Form(''), attachment: UploadFile | None = File(None)):
+    try:
+        # UploadFile spools large uploads to disk. Do not read the whole media into RAM.
+        stream = attachment.file if attachment and attachment.filename else None
+        name = attachment.filename if stream else ''
+        await run_in_threadpool(service(request).add_page_entry, page_id, body, stream, name)
+    finally:
+        if attachment is not None:
+            await attachment.close()
     return redirect(page_id)
+
+
+@router.api_route('/entries/{entry_id}/attachment', methods=['GET', 'HEAD'])
+def entry_attachment(request: Request, entry_id: int):
+    path, media_type = service(request).entry_attachment(entry_id)
+    # Starlette serves bounded chunks and handles Range / If-Range / 206 / 416.
+    return FileResponse(path, media_type=media_type)

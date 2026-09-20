@@ -28,7 +28,7 @@ async def protect_local_app(request: Request, call_next):
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['Referrer-Policy'] = 'no-referrer'
     response.headers['Cache-Control'] = 'no-store'
-    response.headers['Content-Security-Policy'] = "default-src 'self'; img-src 'self' blob:; style-src 'self'; script-src 'self'; form-action 'self'; frame-ancestors 'none'"
+    response.headers['Content-Security-Policy'] = "default-src 'self'; img-src 'self' blob:; media-src 'self'; style-src 'self'; script-src 'self'; form-action 'self'; frame-ancestors 'none'"
     return response
 
 

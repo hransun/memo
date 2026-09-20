@@ -72,10 +72,20 @@
         </div>
       </details>
     </div>
-    <form class="composer" action="/pages/{{ selected.id }}/entries?token={{ token }}" method="post">
+    <form class="composer" enctype="multipart/form-data" action="/pages/{{ selected.id }}/entries?token={{ token }}" method="post">
       <label class="sr-only" for="memo-entry">记下新的进展</label>
-      <textarea id="memo-entry" name="body" rows="3" maxlength="5000" required placeholder="记一笔…"></textarea>
-      <div class="composer-footer"><button type="submit">保存</button></div>
+      <textarea id="memo-entry" name="body" rows="3" maxlength="5000" placeholder="记一笔…"></textarea>
+      <div class="entry-preview" hidden>
+        <img alt="待上传的图片预览" hidden>
+        <span class="attachment-name"></span>
+        <button type="button" class="quiet" data-remove-attachment>移除附件</button>
+      </div>
+      <div class="composer-footer">
+        <label class="attach-photo">＋ 添加附件<input name="attachment" type="file" accept=".jpg,.jpeg,.png,.webp,.mp3,.mp4" aria-label="添加图片、MP3 或 MP4" aria-describedby="attachment-hint"></label>
+        <button type="submit">保存</button>
+      </div>
+      <small id="attachment-hint" class="muted">图片 ≤ 20 MB · MP3 / MP4 ≤ 200 MB</small>
+      <p class="muted" id="attachment-feedback" role="status" hidden></p>
     </form>
     {% if selected.image %}<details class="photo-section"><summary>笔记照片</summary><a href="/pages/{{ selected.id }}/photo" target="_blank" rel="noopener"><img src="/pages/{{ selected.id }}/photo" alt="{{ selected.title }}的笔记照片"></a></details>{% endif %}
     {% if items %}
@@ -103,7 +113,19 @@
       {% for entry in timeline %}
       <article class="history-entry">
         <time>{{ entry.created[:16] }}</time>
-        <div>{% if entry.source %}<span class="entry-source">{{ entry.source }}</span>{% endif %}<p>{{ entry.body }}</p></div>
+        <div>{% if entry.source %}<span class="entry-source">{{ entry.source }}</span>{% endif %}{% if entry.body %}<p>{{ entry.body }}</p>{% endif %}
+          {% if entry.attachment %}
+          {% if entry.media_type == 'image/jpeg' %}
+          <a class="entry-photo" href="/entries/{{ entry.id }}/attachment" target="_blank" rel="noopener" aria-label="查看记录原图"><img src="/entries/{{ entry.id }}/attachment" alt="记录图片" loading="lazy"></a>
+          {% else %}
+          <div class="entry-media">
+            {% if entry.media_type == 'audio/mpeg' %}<audio controls preload="none" src="/entries/{{ entry.id }}/attachment" aria-label="记录音频"></audio>
+            {% elif entry.media_type == 'video/mp4' %}<video controls preload="none" playsinline src="/entries/{{ entry.id }}/attachment" aria-label="记录视频"></video>{% endif %}
+            <p class="muted media-error" role="status" hidden>暂时无法播放：文件可能已损坏或编码不兼容。MP4 建议使用 H.264 / AAC。</p>
+            <a class="quiet media-download" href="/entries/{{ entry.id }}/attachment" download="{{ 'audio.mp3' if entry.media_type == 'audio/mpeg' else 'video.mp4' }}">下载文件</a>
+          </div>
+          {% endif %}
+          {% endif %}</div>
       </article>
       {% endfor %}
     </section>

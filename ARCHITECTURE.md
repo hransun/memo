@@ -56,3 +56,9 @@
 源码、模板、样式、依赖锁定文件及测试进入 Git。数据库、照片、OCR 结果、备份、虚拟环境、环境密钥文件，以及包含个人事项的本地导入脚本不进入 Git。
 
 在本地查看版本：`git log --oneline`。比较版本：`git diff <旧提交> <新提交>`。代码回退不会恢复数据库；数据恢复使用独立备份。
+
+## 笔记附件
+
+`memo/attachments.py` 是 Service 层的文件处理模块：校验大小和基本文件格式、处理图片、分块保存音视频，不依赖 HTTP 或数据库。它不负责判断视频编码，也不做转码。
+
+`page_entries` 新增 `attachment`、`media_type` 字段，启动时兼容升级，旧记录默认没有附件。Controller 把 UploadFile 的临时文件交给 Service，避免整段音视频读入内存。附件读取路由先检查笔记未进入回收站，再通过 FileResponse 提供 GET / HEAD、Range 分段响应；浏览器原生播放器使用 preload="none"。
