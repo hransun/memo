@@ -113,7 +113,7 @@
       {% for entry in timeline %}
       <article class="history-entry">
         <time>{{ entry.created[:16] }}</time>
-        <div>{% if entry.source %}<span class="entry-source">{{ entry.source }}</span>{% endif %}{% if entry.body %}<p>{{ entry.body }}</p>{% endif %}
+        <div>{% if entry.source %}<span class="entry-source">{{ entry.source }}</span>{% endif %}{% if entry.body %}<p>{{ entry.body|linkify }}</p>{% endif %}
           {% if entry.attachment %}
           {% if entry.media_type == 'image/jpeg' %}
           <a class="entry-photo" href="/entries/{{ entry.id }}/attachment" target="_blank" rel="noopener" aria-label="查看记录原图"><img src="/entries/{{ entry.id }}/attachment" alt="记录图片" loading="lazy"></a>

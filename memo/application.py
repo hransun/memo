@@ -12,6 +12,7 @@ from .controllers import router
 from .errors import MemoError
 from .models import Store
 from .services import MemoService
+from .text import linkify
 from .views import render
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -47,6 +48,7 @@ def create_app(data_dir=None):
     app.state.service = MemoService(store, data / 'uploads')
     app.state.token = secrets.token_urlsafe(32)
     app.state.templates = Jinja2Templates(directory=ROOT / 'templates')
+    app.state.templates.env.filters['linkify'] = linkify
     app.mount('/static', StaticFiles(directory=ROOT / 'static'), name='static')
     app.middleware('http')(protect_local_app)
     app.add_exception_handler(MemoError, expected_error)
